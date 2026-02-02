@@ -30,7 +30,7 @@ module.exports.register = async (req, res, next) => {
     delete userResponse.password;
 
     //6.Respondemos al cliente
-    return res.json({ status: true, user: user.userResponse });
+    return res.json({ status: true, user: userResponse });
 
   } catch (ex) {
     //si hay error lo mandamos al sig middleware
@@ -39,30 +39,48 @@ module.exports.register = async (req, res, next) => {
 };
 
 module.exports.login = async (req,res, next) => {
-try{
-  const { email, password } = req.body;
+  try{
+    const { email, password } = req.body;
 
-  //1.buscamos si usuario existe por email
-  const user = await User.findOne({ email });
-  if(!user) {
-    return res.json({ msg: "Usuario o contraseña incorrectos", status: false })
+    //1.buscamos si usuario existe por email
+    const user = await User.findOne({ email });
+    if(!user) {
+      return res.json({ msg: "Usuario o contraseña incorrectos", status: false })
+    }
+
+    //2.Comparamaos la contraseña que escribimos y la encriptada en la BD
+    //bcrypt.compare hace la comparacion matematica a ver si coinciden
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if(!isPasswordValid) {
+      return res.json({ msg: "Usuario o contraseña incorrectos", status: false });
+    }
+
+    //3.Respondemos is todo esta bien
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    return res.json({ status: true, user: userResponse});
+
+  } catch (ex) {
+    next(ex);
   }
-
-  //2.Comparamaos la contraseña que escribimos y la encriptada en la BD
-  //bcrypt.compare hace la comparacion matematica a ver si coinciden
-
-  const isPasswordValid = await bcrypt.compare(password, user.password);
-  if(!isPasswordValid) {
-    return res.json({ msg: "Usuario o contraseña incorrectos", status: false });
-  }
-
-  //3.Respondemos is todo esta bien
-  const userResponse = user.toObject();
-  delete userResponse.password;
-
-  return res.json({ status: true, user: userResponse});
-
-} catch (ex) {
-  next(ex);
-}
 };
+
+module.exports.getAllUsers = async (req, res, next) => {
+  try{
+    //buscamos todo cuyo _id no se igual al mio
+    const users = await User.find({ _id: { $ne: req.params.id } }).select([
+      "email",
+      "name",
+      "lastName",
+      "maternalLastName",
+      "avatarImage",
+      "_id",
+    ]);
+    return res.json(users)
+  } catch (ex) {
+    next(ex)
+  }
+
+}
