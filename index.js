@@ -1,10 +1,12 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const userRoutes = require("./routes/userRoutes")
-require("dotenv").config();
+const userRoutes = require("./routes/userRoutes");
+const messageRoutes = require("./routes/messagesRoute");
+
 
 const app = express();
+require("dotenv").config();
 
 //Middlewares
 app.use(cors());
@@ -12,6 +14,7 @@ app.use(express.json()); //Nos permite recibir datos en formato json
 
 // --- ZONA DE RUTAS ---
 app.use("/api/auth", userRoutes);
+app.use("/api/message", messageRoutes);
 
 //Conexion a MongooDB
 mongoose
