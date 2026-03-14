@@ -3,6 +3,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const userRoutes = require("./routes/userRoutes");
 const messageRoutes = require("./routes/messagesRoute");
+const socket = require("socket.io") 
 
 
 const app = express();
@@ -26,15 +27,40 @@ mongoose
   console.log("Error en conexion a Mongo DB", err.message)
 })
 
-//Ruta de prueba
-app.get("/", (req, res) => {
-  res.send("mi servidor esta funcionando!!!")
+//Se guarda la instancia del servidor en una variable
+const server = app.listen(process.env.PORT, () => {
+  console.log(`sever corriendo en puerto ${process.env.PORT}`);
 });
 
-//Configuracion de puerto
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => {
-  console.log(`Server corriendo en el puerto ${PORT}`)
+//configuracion SOCKET.IO
+const io = socket(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    credentials: true
+  },
 });
+
+//variable global para guardar usuarios conectadados en memoria RAM
+global.onlineUsers = new Map()
+
+io.on("connection", (socket) => {
+  //cuando un usuario entra a la app guardamos su id
+  global.chatSocket = socket;
+
+  socket.on("add-user", (userId) => {
+    onlineUsers.set(userId, socket.id);
+  });
+
+  //cuando envian un mensaje
+  socket.on("send-msg", (data) => {
+    //buscamos el socket del destinatario
+    const sendUserSocket = onlineUsers.get(data.to)
+
+    // si esta conectado le mandamos el mensaje al instante
+    if(sendUserSocket) {
+      socket.to(sendUserSocket).emit("msg-receive", data.msg);
+    }
+  });
+})
+
 
